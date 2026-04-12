@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
 
 class MapsService {
-  static const String googleMapsApiKey = 'AIzaSyDhqcDfG8M1eNfpuEddiWJn_QnD-mjCqcM';
+  static const String googleMapsApiKey = 'API key';
   static const String googleMapsBaseUrl = 'https://maps.googleapis.com/maps/api';
 
   static Future<Position?> getCurrentLocation() async {
