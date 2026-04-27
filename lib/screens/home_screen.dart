@@ -9,7 +9,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: const Text('Home',style: TextStyle(color: Colors.white),),
         backgroundColor: const Color(0xFF5E35B1),
       ),
       body: Consumer<AuthProvider>(
@@ -31,7 +31,10 @@ class HomeScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5E35B1),
                   ),
-                  child: const Text('Logout'),
+                  child: const Text(
+                    'Logout', 
+                    style: TextStyle(color: Colors.white),
+                    ),
                 ),
               ],
             ),
