@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -7,20 +7,30 @@ from schemas import UserCreate, UserResponse, Token, LoginRequest
 from database import get_db, engine, Base
 import auth as auth_service
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
+import logging
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+logging.basicConfig(level=logging.INFO)
+logger= logging.getLogger(__name__)
 
 app = FastAPI(title="Auth API")
 
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://flutter-auth-alpha.vercel.app"],  # Change from [*] 
-    allow_credentials=True,
+    allow_origins=["*"], 
+    allow_credentials=False, #change from True 
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    response =await call_next(request)
+    logger.info(f"Response: {response.status_code}")
+    return response
 
 @app.get("/")
 def read_root():
