@@ -24123,7 +24123,7 @@ F_(a,b){return A.azX(a,b)},
 azX(a,b){var s=0,r=A.R(t.W8),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$F_=A.S(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:p=4
-k=A.fV("https://yourself-conditions-shareware-rear.trycloudflare.com/auth/signup")
+k=A.fV("https://incidents-rat-distinguished-tests.trycloudflare.com/auth/signup")
 j=t.N
 i=A.ah(["Content-Type","application/json"],j,j)
 s=7
@@ -24161,7 +24161,7 @@ EZ(a,b){return A.azW(a,b)},
 azW(a,b){var s=0,r=A.R(t.W8),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$EZ=A.S(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:p=4
-k=A.fV("https://yourself-conditions-shareware-rear.trycloudflare.com/auth/login")
+k=A.fV("https://incidents-rat-distinguished-tests.trycloudflare.com/auth/login")
 j=t.N
 i=A.ah(["Content-Type","application/json"],j,j)
 s=7
