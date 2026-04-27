@@ -16,7 +16,7 @@ app = FastAPI(title="Auth API")
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to specific Flutter app URL in production
+    allow_origins=["https://flutter-auth-alpha.vercel.app"],  # Change from [*] 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
