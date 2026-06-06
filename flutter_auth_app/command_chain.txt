@@ -1,0 +1,11 @@
+# Terminal 1: Backend
+cd flutter-auth-backend
+venv/Scripts/activate
+python run.py
+
+# Terminal 2: Emulator
+emulator -avd Medium_Phone_API_36.1
+
+# Terminal 3: Flutter App (after emulator boots)
+cd flutter_auth_app
+flutter run
