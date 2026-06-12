@@ -4,6 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,6 +31,30 @@ class TodoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Adjust spacing for keyboard and navigation bar
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            
+            val density = resources.displayMetrics.density
+            val margin16 = (16 * density).toInt()
+            
+            // Calculate total bottom inset (keyboard or nav bar)
+            val bottomInset = if (ime.bottom > 0) ime.bottom else systemBars.bottom
+            
+            // Apply bottom margin to the input card to lift it above nav bar/keyboard
+            binding.cvInputTodo.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = margin16 + bottomInset
+            }
+            
+            // Add padding to RecyclerView so items are not hidden behind the card
+            // Input card height is roughly 80dp + margins
+            val rvBottomPadding = (100 * density).toInt() + bottomInset
+            binding.rvTodoItems.setPadding(0, 0, 0, rvBottomPadding)
+            
+            insets
+        }
+
         todoAdapter = TodoAdapter(
             todos = emptyList(),
             onCheckChanged = { todo, isChecked ->
@@ -38,7 +65,7 @@ class TodoFragment : Fragment() {
         binding.rvTodoItems.layoutManager = LinearLayoutManager(requireContext())
 
         viewModel.todos.observe(viewLifecycleOwner) { todos ->
-            todoAdapter.updateTodos(todos.toList())
+            todoAdapter.updateTodos(todos)
             updateEmptyState(todos.isEmpty())
         }
 
@@ -49,6 +76,11 @@ class TodoFragment : Fragment() {
                 viewModel.addTodo(todo)
                 binding.etTodoTitle.text.clear()
             }
+        }
+        
+        binding.etTodoTitle.setOnEditorActionListener { _, _, _ ->
+            binding.btnAddTodo.performClick()
+            true
         }
 
         binding.btnDeleteDoneTodos.setOnClickListener {
