@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">🚀 Todo Master Pro 🚀</string>
+    <string name="menu_tasks">My tasks</string>
+    <string name="menu_deleted">Deleted</string>
+    <string name="hint_enter_todo">Enter To Do List</string>
+    <string name="btn_add_todo">Add Todo</string>
+    <string name="btn_delete">Delete</string>
+    <string name="empty_state_icon">📝</string>
+    <string name="empty_state_title">No tasks yet</string>
+    <string name="empty_state_subtitle">Add your first task below!</string>
+</resources>
