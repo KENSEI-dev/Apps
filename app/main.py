@@ -1,6 +1,8 @@
 import httpx
 from fastapi import FastAPI, Query, HTTPException
 from .places import search_nearby, parse_place, UpstreamError
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
 
 app=FastAPI(title="Swiggy-lite")
 
@@ -22,3 +24,6 @@ def restaurants(
     results = [parse_place(p, lat, lng) for p in raw_places]
     results.sort(key=lambda p: (p["distance_m"] is None, p["distance_m"] or 0))
     return {"count": len(results), "results": results}
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+app.mount("/", StaticFiles(directory=BASE_DIR / "static", html=True), name="static")

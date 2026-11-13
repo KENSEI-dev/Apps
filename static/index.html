@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E1A2B">
+<title>Swiggy-lite: nearby restaurants</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1E1A2B;--paper:#F6F5F9;--card:#fff;--text:#1E1A2B;--line:#DDD9E6;--muted:#645F73;
+--mustard:#F0A202;--chilli:#C8312B;--leaf:#19794B;
+--display:"Bricolage Grotesque",system-ui,sans-serif;--body:"Figtree",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root{--ink:#0F0D18;--paper:#16131F;--text:#F1EFF7;--line:#3A3450;--muted:#A9A3BA;--leaf:#4CC38A;--chilli:#FF7A70}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--text);font:16px/1.45 var(--body)}
+header{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 22px) 20px 24px}
+h1{font:800 30px/1.1 var(--display);margin:0 0 6px}
+header p{margin:0;color:#CFC9E0;max-width:34ch}
+main{max-width:640px;margin:0 auto}
+.bar{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);
+padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select{font:600 15px var(--body);color:var(--text);cursor:pointer}
+.go{background:var(--mustard);color:#1E1A2B;border:0;border-radius:10px;padding:11px 16px;flex:1 1 100%}
+.chip,select{background:transparent;border:1px solid var(--line);border-radius:999px;padding:8px 14px}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--paper);border-color:var(--text)}
+select{appearance:none;margin-left:auto}
+:focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
+#count{margin:0;padding:12px 16px 0;color:var(--muted);font-size:14px;min-height:30px}
+ul{list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:78px 1fr;gap:14px;padding:16px;border-bottom:1px solid var(--line)}
+.dist b{display:block;font:800 30px/1 var(--display);letter-spacing:-.02em}
+.dist span{color:var(--muted);font-size:14px}
+h2{font:600 18px/1.25 var(--display);margin:0 0 6px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+.rate{background:var(--mustard);color:#1E1A2B;font-weight:600;border-radius:6px;padding:1px 8px}
+.addr{margin:6px 0 10px;color:var(--muted);font-size:14px}
+.foot{display:flex;gap:14px;align-items:center;font-size:14px}
+.badge{font-weight:600}
+.open{color:var(--leaf)}.closed{color:var(--chilli)}.unk{color:var(--muted)}
+.foot a{color:var(--text);margin-left:auto;font-weight:600}
+.msg{padding:28px 20px}
+.msg p{margin:0 0 14px;max-width:44ch}
+.msg button{background:transparent;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:0 8px 8px 0}
+.skel .a,.skel .b{background:var(--line);border-radius:6px;height:18px;animation:pulse 1.2s ease-in-out infinite}
+.skel .a{height:30px;width:60px}.skel .b{width:70%;margin-bottom:10px}
+@keyframes pulse{50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){.skel .a,.skel .b{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Hungry nearby?</h1>
+  <p>Restaurants around you, nearest first, with ratings and open status.</p>
+</header>
+<main>
+  <div class="bar">
+    <button class="go" id="go">Find restaurants near me</button>
+    <button class="chip" id="s-dist" aria-pressed="true">Nearest</button>
+    <button class="chip" id="s-rate" aria-pressed="false">Top rated</button>
+    <button class="chip" id="s-open" aria-pressed="false">Open now</button>
+    <select id="radius" aria-label="Search radius">
+      <option value="500">500 m</option>
+      <option value="1000">1 km</option>
+      <option value="1500" selected>1.5 km</option>
+      <option value="3000">3 km</option>
+    </select>
+  </div>
+  <p id="count" aria-live="polite"></p>
+  <ul id="list"></ul>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const PRICE = {PRICE_LEVEL_INEXPENSIVE:"₹", PRICE_LEVEL_MODERATE:"₹₹",
+               PRICE_LEVEL_EXPENSIVE:"₹₹₹", PRICE_LEVEL_VERY_EXPENSIVE:"₹₹₹₹"};
+const SAMPLE = {lat: 22.5726, lng: 88.3639}; // central Kolkata, for testing without GPS
+let items = [], pos = null, sortBy = "distance", openOnly = false, reqId = 0;
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function getPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject({code: 0});
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({lat: p.coords.latitude, lng: p.coords.longitude}),
+      reject, {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
+  });
+}
+
+function showSkeleton() {
+  $("#count").textContent = "Looking nearby…";
+  const list = $("#list"); list.replaceChildren();
+  for (let i = 0; i < 4; i++) {
+    const li = el("li", "row skel");
+    const right = el("div"); right.append(el("div", "b"), el("div", "b"));
+    li.append(el("div", "a"), right); list.append(li);
+  }
+}
+
+function showMsg(text, offerSample) {
+  $("#count").textContent = "";
+  const box = el("li", "msg"); box.append(el("p", "", text));
+  const retry = el("button", "", "Try again"); retry.onclick = () => find();
+  box.append(retry);
+  if (offerSample) {
+    const s = el("button", "", "Use sample area (central Kolkata)");
+    s.onclick = () => find(true); box.append(s);
+  }
+  $("#list").replaceChildren(box);
+}
+
+async function find(useSample = false) {
+  showSkeleton();
+  try { pos = useSample ? SAMPLE : await getPosition(); }
+  catch (e) {
+    return showMsg(e.code === 1
+      ? "Location is blocked. Allow location for this site in your browser settings."
+      : "Couldn’t get your location. Check that GPS is on and try again.", true);
+  }
+  load();
+}
+
+async function load() {
+  const id = ++reqId; showSkeleton();
+  try {
+    const r = await fetch(`/api/restaurants?lat=${pos.lat}&lng=${pos.lng}&radius=${$("#radius").value}`);
+    if (id !== reqId) return;
+    if (!r.ok) throw new Error(r.status);
+    items = (await r.json()).results; render();
+  } catch (e) {
+    if (id === reqId) showMsg("Couldn’t load restaurants. Check your connection and try again.", false);
+  }
+}
+
+function fmtDist(m) {
+  if (m == null) return ["–", ""];
+  return m < 1000 ? [String(m), "m"] : [(m / 1000).toFixed(1), "km"];
+}
+
+function render() {
+  const list = items.filter(p => !openOnly || p.open_now === true);
+  list.sort(sortBy === "rating"
+    ? (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || b.rating_count - a.rating_count
+    : (a, b) => (a.distance_m ?? 1e9) - (b.distance_m ?? 1e9));
+  if (!list.length) return showMsg(items.length
+    ? "No open restaurants in this radius. Turn off “Open now” or widen the radius."
+    : "No restaurants found in this radius. Try a larger one.", false);
+  $("#count").textContent = `${list.length} place${list.length > 1 ? "s" : ""} within ${$("#radius").selectedOptions[0].text}`;
+  $("#list").replaceChildren(...list.map(p => {
+    const [n, u] = fmtDist(p.distance_m);
+    const dist = el("div", "dist"); dist.append(el("b", "", n), el("span", "", u));
+    const meta = el("div", "meta");
+    meta.append(el("span", "rate", p.rating != null ? p.rating.toFixed(1) : "New"));
+    if (p.rating != null) meta.append(el("span", "", `${p.rating_count} ratings`));
+    if (PRICE[p.price_level]) meta.append(el("span", "", PRICE[p.price_level]));
+    const foot = el("div", "foot");
+    const st = p.open_now === true ? ["Open now", "open"] : p.open_now === false ? ["Closed", "closed"] : ["Hours unknown", "unk"];
+    foot.append(el("span", "badge " + st[1], st[0]));
+    if (p.lat != null) {
+      const a = el("a", "", "Directions");
+      a.href = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+      a.target = "_blank"; a.rel = "noopener"; foot.append(a);
+    }
+    const info = el("div"); info.append(el("h2", "", p.name || "Unnamed place"), meta, el("p", "addr", p.address || ""), foot);
+    const li = el("li", "row"); li.append(dist, info); return li;
+  }));
+}
+
+function setSort(mode) {
+  sortBy = mode;
+  $("#s-dist").setAttribute("aria-pressed", mode === "distance");
+  $("#s-rate").setAttribute("aria-pressed", mode === "rating");
+  if (items.length) render();
+}
+
+$("#go").onclick = () => find();
+$("#s-dist").onclick = () => setSort("distance");
+$("#s-rate").onclick = () => setSort("rating");
+$("#s-open").onclick = e => {
+  openOnly = !openOnly; e.currentTarget.setAttribute("aria-pressed", openOnly);
+  if (items.length) render();
+};
+$("#radius").onchange = () => { if (pos) load(); };
+showMsg("Tap “Find restaurants near me” to share your location and see what’s around.", false);
+$("#list .msg button").remove();
+</script>
+</body>
+</html>
